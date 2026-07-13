@@ -17,16 +17,16 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Kütüphaneleri Yükle (Yeni Gizli Silahımız)
-        run: pip install curl_cffi beautifulsoup4
+      - name: Kütüphaneleri Yükle
+        run: pip install requests beautifulsoup4
 
-      - name: Botu Çalıştır (Chrome Taklidi)
+      - name: Botu Çalıştır (Google Bypass)
         run: python scraper.py
 
       - name: Değişiklikleri GitHub'a Kaydet
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/movies.json
+          git add public/ || echo "Public klasörü henüz oluşmadı."
           git commit -m "🤖 Vitrin Güncellendi" || echo "Kaydedilecek yeni bir sey yok."
           git push || echo "Gonderim hatasi."
