@@ -1,7 +1,6 @@
 import * as cheerio from 'cheerio';
 import { NextResponse } from 'next/server';
 
-// İŞTE SİHİRLİ KOD: Vercel'in Cloudflare Edge altyapısını kullanmasını sağlar
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
@@ -9,26 +8,37 @@ const BASE_URL = 'https://www.hdfilmcehennemi.nl';
 
 export async function GET() {
   try {
-    const response = await fetch(`${BASE_URL}/load/page/1/home/`, {
-      method: 'GET',
+    const targetUrl = `${BASE_URL}/load/page/1/home/`;
+    
+    // 1. Taktik: CORS Proxy üzerinden istek at (Cloudflare bunu genelde insan sanır)
+    let response = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'X-Requested-With': 'fetch',
-        'Accept': 'application/json, text/plain, */*'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'X-Requested-With': 'fetch'
       }
     });
 
+    // 2. Taktik: Eğer ilk proxy yakalanırsa (403 vb. verirse) CodeTabs Proxy'ye geç
     if (!response.ok) {
-      return NextResponse.json({ error: `Site HTTP Hatası Döndürdü: ${response.status}` }, { status: 500 });
+       response = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`);
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      return NextResponse.json({ error: `Proxy'ler de engellendi. HTTP: ${response.status}` }, { status: 500 });
+    }
+
+    const textData = await response.text();
     
-    if (!data || !data.html) {
-      return NextResponse.json({ error: 'Edge bağlandı ama HTML boş döndü.' }, { status: 500 });
+    // Gelen veri formunu kontrol et ve HTML'i ayıkla
+    let htmlContent = "";
+    try {
+        const parsed = JSON.parse(textData);
+        htmlContent = parsed.html || textData; 
+    } catch(e) {
+        htmlContent = textData;
     }
 
-    const $ = cheerio.load(data.html);
+    const $ = cheerio.load(htmlContent);
     const movies = [];
 
     $('a').each((i, el) => {
@@ -42,13 +52,13 @@ export async function GET() {
     });
 
     if (movies.length === 0) {
-      return NextResponse.json({ error: 'Veri çekildi ama film kartları bulunamadı.' }, { status: 500 });
+      return NextResponse.json({ error: 'Sayfa aşıldı ama film kartları boş döndü.' }, { status: 500 });
     }
 
     return NextResponse.json({ movies });
   } catch (error) {
     return NextResponse.json({ 
-      error: 'Edge Proxy Hatası (Bağlantı Kurulamadı)',
+      error: 'Proxy sisteminde kritik hata.',
       detay: error.message 
     }, { status: 500 });
   }
