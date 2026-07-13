@@ -55,8 +55,29 @@ export async function GET(request) {
     const pageHtml = await fetchViaProxy(url);
     const $ = cheerio.load(pageHtml);
     
-    const videoId = $('button.alternative-link').first().attr('data-video');
-    if (!videoId) return NextResponse.json({ error: 'Video ID bulunamadı' }, { status: 404 });
+    // "Close" yerine "Rapidrame" veya geçerli bir video alternatifini seçiyoruz
+    const buttons = $('button.alternative-link');
+    let videoId = null;
+
+    buttons.each((i, el) => {
+        const text = $(el).text().toLowerCase();
+        const vId = $(el).attr('data-video');
+        if (text.includes('rapidrame') && vId) {
+            videoId = vId;
+        }
+    });
+
+    // Rapidrame bulunamazsa ilk geçerli video ID'yi al
+    if (!videoId) {
+        buttons.each((i, el) => {
+            const vId = $(el).attr('data-video');
+            if (vId && !videoId) {
+                videoId = vId;
+            }
+        });
+    }
+
+    if (!videoId) return NextResponse.json({ error: 'Geçerli Video ID bulunamadı' }, { status: 404 });
 
     const apiText = await fetchViaProxy(`${BASE_URL}/video/${videoId}/`);
 
@@ -69,6 +90,10 @@ export async function GET(request) {
     if (apiText.includes("rapidrame") && apiText.includes("?rapidrame_id=")) {
         const rapidId = apiText.split('?rapidrame_id=')[1].split('"')[0].split('\\')[0];
         iframe = `${BASE_URL}/rplayer/` + rapidId;
+    } else if (apiText.includes("mobi")) {
+        const apiDoc = cheerio.load(apiText);
+        iframe = apiDoc('iframe').attr('data-src') || apiDoc('iframe').attr('src') || '';
+        iframe = iframe.replace(/\\/g, '');
     }
 
     const iframeText = await fetchViaProxy(iframe);
