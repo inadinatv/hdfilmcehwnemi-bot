@@ -5,6 +5,7 @@ export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 const BASE_URL = 'https://www.hdfilmcehennemi.nl';
+const ZENROWS_API_KEY = '9f12e290f53e489c5b15b92dd18d6136f39d483b';
 
 function dcHello(base64Input) {
     const decodedOnce = decodeURIComponent(escape(atob(base64Input)));
@@ -19,18 +20,13 @@ function dcHello(base64Input) {
     return "https" + hdchLink.split("https")[1];
 }
 
-// Tüm video isteklerini maskeleyecek özel fonksiyon
-async function fetchWithProxy(targetUrl) {
-    let response = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        'X-Requested-With': 'fetch',
-        'Referer': BASE_URL
-      }
-    });
+// Tüm video isteklerini ZenRows üzerinden atacak özel fonksiyon
+async function fetchWithZenRows(targetUrl) {
+    const zenRowsUrl = `https://api.zenrows.com/v1/?apikey=${ZENROWS_API_KEY}&url=${encodeURIComponent(targetUrl)}&mode=auto`;
+    const response = await fetch(zenRowsUrl);
     
     if (!response.ok) {
-        response = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`);
+        throw new Error(`ZenRows İsteği Başarısız: ${response.status}`);
     }
     
     return await response.text();
@@ -43,20 +39,20 @@ export async function GET(request) {
   if (!url) return NextResponse.json({ error: 'URL eksik' }, { status: 400 });
 
   try {
-    const pageHtml = await fetchWithProxy(url);
+    const pageHtml = await fetchWithZenRows(url);
     const $ = cheerio.load(pageHtml);
     const videoId = $('button.alternative-link').first().attr('data-video');
 
-    if(!videoId) return NextResponse.json({ error: 'Video ID bulunamadı (Telif yemiş olabilir)' }, { status: 404 });
+    if(!videoId) return NextResponse.json({ error: 'Video ID bulunamadı' }, { status: 404 });
 
-    const apiText = await fetchWithProxy(`${BASE_URL}/video/${videoId}/`);
+    const apiText = await fetchWithZenRows(`${BASE_URL}/video/${videoId}/`);
     
     let iframeUrl = apiText.match(/data-src=\\"([^"]+)/)[1].replace(/\\/g, '');
     if (iframeUrl.includes("rapidrame")) {
         iframeUrl = `${BASE_URL}/rplayer/` + iframeUrl.split("?rapidrame_id=")[1];
     }
 
-    const iframeText = await fetchWithProxy(iframeUrl);
+    const iframeText = await fetchWithZenRows(iframeUrl);
     const base64Match = iframeText.match(/dc_hello\("([^"]+)"\)/);
     
     if (base64Match && base64Match[1]) {
@@ -64,7 +60,7 @@ export async function GET(request) {
         return NextResponse.json({ m3u8Url });
     }
 
-    return NextResponse.json({ error: 'Şifre kırılamadı veya Proxy yakalandı' }, { status: 500 });
+    return NextResponse.json({ error: 'Şifre kırılamadı' }, { status: 500 });
   } catch (error) {
     return NextResponse.json({ error: 'Hata oluştu', detay: error.message }, { status: 500 });
   }
