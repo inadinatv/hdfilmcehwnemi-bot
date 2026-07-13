@@ -5,39 +5,21 @@ export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 const BASE_URL = 'https://www.hdfilmcehennemi.nl';
+const ZENROWS_API_KEY = '9f12e290f53e489c5b15b92dd18d6136f39d483b';
 
 export async function GET() {
   try {
     const targetUrl = `${BASE_URL}/load/page/1/home/`;
-    
-    // 1. Taktik: CORS Proxy üzerinden istek at (Cloudflare bunu genelde insan sanır)
-    let response = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'X-Requested-With': 'fetch'
-      }
-    });
+    // ZenRows URL'imizi hazırlıyoruz (Python'daki params mantığı)
+    const zenRowsUrl = `https://api.zenrows.com/v1/?apikey=${ZENROWS_API_KEY}&url=${encodeURIComponent(targetUrl)}&mode=auto`;
 
-    // 2. Taktik: Eğer ilk proxy yakalanırsa (403 vb. verirse) CodeTabs Proxy'ye geç
-    if (!response.ok) {
-       response = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`);
-    }
+    const response = await fetch(zenRowsUrl);
 
     if (!response.ok) {
-      return NextResponse.json({ error: `Proxy'ler de engellendi. HTTP: ${response.status}` }, { status: 500 });
+      return NextResponse.json({ error: `ZenRows Hatası: ${response.status}` }, { status: 500 });
     }
 
-    const textData = await response.text();
-    
-    // Gelen veri formunu kontrol et ve HTML'i ayıkla
-    let htmlContent = "";
-    try {
-        const parsed = JSON.parse(textData);
-        htmlContent = parsed.html || textData; 
-    } catch(e) {
-        htmlContent = textData;
-    }
-
+    const htmlContent = await response.text();
     const $ = cheerio.load(htmlContent);
     const movies = [];
 
@@ -52,13 +34,13 @@ export async function GET() {
     });
 
     if (movies.length === 0) {
-      return NextResponse.json({ error: 'Sayfa aşıldı ama film kartları boş döndü.' }, { status: 500 });
+      return NextResponse.json({ error: 'ZenRows siteye girdi ama film kartları bulunamadı.' }, { status: 500 });
     }
 
     return NextResponse.json({ movies });
   } catch (error) {
     return NextResponse.json({ 
-      error: 'Proxy sisteminde kritik hata.',
+      error: 'ZenRows Bağlantı Hatası',
       detay: error.message 
     }, { status: 500 });
   }
