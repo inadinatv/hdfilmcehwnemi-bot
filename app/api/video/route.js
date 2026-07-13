@@ -1,14 +1,12 @@
 import * as cheerio from 'cheerio';
 import { NextResponse } from 'next/server';
 
-// Cloudflare Edge Altyapısı
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 const BASE_URL = 'https://www.hdfilmcehennemi.nl';
 
 function dcHello(base64Input) {
-    // Edge ortamında Buffer çalışmadığı için standart atob (base64 çözücü) kullanıyoruz
     const decodedOnce = decodeURIComponent(escape(atob(base64Input)));
     const reversedString = decodedOnce.split('').reverse().join('');
     const decodedTwice = decodeURIComponent(escape(atob(reversedString)));
@@ -21,6 +19,23 @@ function dcHello(base64Input) {
     return "https" + hdchLink.split("https")[1];
 }
 
+// Tüm video isteklerini maskeleyecek özel fonksiyon
+async function fetchWithProxy(targetUrl) {
+    let response = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'X-Requested-With': 'fetch',
+        'Referer': BASE_URL
+      }
+    });
+    
+    if (!response.ok) {
+        response = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`);
+    }
+    
+    return await response.text();
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const url = searchParams.get('url');
@@ -28,25 +43,20 @@ export async function GET(request) {
   if (!url) return NextResponse.json({ error: 'URL eksik' }, { status: 400 });
 
   try {
-    const pageReq = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    const pageHtml = await pageReq.text();
+    const pageHtml = await fetchWithProxy(url);
     const $ = cheerio.load(pageHtml);
     const videoId = $('button.alternative-link').first().attr('data-video');
 
-    if(!videoId) return NextResponse.json({ error: 'Video bulunamadı' }, { status: 404 });
+    if(!videoId) return NextResponse.json({ error: 'Video ID bulunamadı (Telif yemiş olabilir)' }, { status: 404 });
 
-    const apiGet = await fetch(`${BASE_URL}/video/${videoId}/`, {
-      headers: { 'X-Requested-With': 'fetch' }
-    });
-    const apiText = await apiGet.text();
+    const apiText = await fetchWithProxy(`${BASE_URL}/video/${videoId}/`);
     
     let iframeUrl = apiText.match(/data-src=\\"([^"]+)/)[1].replace(/\\/g, '');
     if (iframeUrl.includes("rapidrame")) {
         iframeUrl = `${BASE_URL}/rplayer/` + iframeUrl.split("?rapidrame_id=")[1];
     }
 
-    const iframeReq = await fetch(iframeUrl, { headers: { 'Referer': BASE_URL } });
-    const iframeText = await iframeReq.text();
+    const iframeText = await fetchWithProxy(iframeUrl);
     const base64Match = iframeText.match(/dc_hello\("([^"]+)"\)/);
     
     if (base64Match && base64Match[1]) {
@@ -54,7 +64,7 @@ export async function GET(request) {
         return NextResponse.json({ m3u8Url });
     }
 
-    return NextResponse.json({ error: 'Link şifrelenmiş' }, { status: 500 });
+    return NextResponse.json({ error: 'Şifre kırılamadı veya Proxy yakalandı' }, { status: 500 });
   } catch (error) {
     return NextResponse.json({ error: 'Hata oluştu', detay: error.message }, { status: 500 });
   }
