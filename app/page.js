@@ -7,10 +7,21 @@ export default function Home() {
   const [movies, setMovies] = useState([]);
   const [playing, setPlaying] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
   const videoRef = useRef(null);
 
   useEffect(() => {
-    axios.get('/api/home').then(res => setMovies(res.data.movies || []));
+    axios.get('/api/home')
+      .then(res => {
+        if (res.data.error) {
+          setErrorMessage(res.data.error + " | " + (res.data.detay || ""));
+        } else {
+          setMovies(res.data.movies || []);
+        }
+      })
+      .catch(err => {
+        setErrorMessage(err.response?.data?.error || "API'ye hiç ulaşılamadı.");
+      });
   }, []);
 
   const playMovie = async (movieUrl) => {
@@ -42,6 +53,13 @@ export default function Home() {
         NETFLIX <span style={{ color: 'white', fontSize: '14px', fontWeight: 'normal' }}>Tarzı Bot</span>
       </h1>
 
+      {errorMessage && (
+        <div style={{ backgroundColor: 'rgba(229, 9, 20, 0.2)', border: '1px solid #E50914', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
+          <h3 style={{ color: '#E50914', margin: '0 0 10px 0' }}>Sistem Hatası:</h3>
+          <p style={{ margin: 0 }}>{errorMessage}</p>
+        </div>
+      )}
+
       {playing && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 50, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
           <button onClick={() => setPlaying(null)} style={{ position: 'absolute', top: '20px', right: '20px', backgroundColor: '#E50914', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '5px' }}>Kapat</button>
@@ -50,17 +68,21 @@ export default function Home() {
         </div>
       )}
 
-      <h2 style={{ fontSize: '20px', marginBottom: '15px' }}>Yeni Eklenenler</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '15px' }}>
-        {movies.map((movie, idx) => (
-          <div key={idx} onClick={() => playMovie(movie.href)} style={{ cursor: 'pointer', position: 'relative' }}>
-            <img src={movie.poster} alt={movie.title} style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '8px' }} />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', padding: '5px', background: 'rgba(0,0,0,0.7)', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' }}>
-              <p style={{ fontSize: '12px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{movie.title}</p>
-            </div>
+      {!errorMessage && (
+        <>
+          <h2 style={{ fontSize: '20px', marginBottom: '15px' }}>Yeni Eklenenler</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '15px' }}>
+            {movies.map((movie, idx) => (
+              <div key={idx} onClick={() => playMovie(movie.href)} style={{ cursor: 'pointer', position: 'relative' }}>
+                <img src={movie.poster} alt={movie.title} style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '8px' }} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', padding: '5px', background: 'rgba(0,0,0,0.7)', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' }}>
+                  <p style={{ fontSize: '12px', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{movie.title}</p>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </div>
   );
 }
