@@ -2,8 +2,8 @@ name: Film Vitrinini Guncelle
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Her 6 saatte bir otomatik çalışır
-  workflow_dispatch: # Senin manuel olarak butona basıp çalıştırman için
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -27,6 +27,6 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/movies.json
-          git commit -m "🤖 Vitrin Güncellendi" || echo "Değişiklik yok"
-          git push
+          git add .
+          git commit -m "🤖 Vitrin Güncellendi" || echo "Kaydedilecek yeni bir sey yok."
+          git push || echo "Gonderim hatasi."
