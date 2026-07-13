@@ -1,23 +1,16 @@
-import requests
+from curl_cffi import requests
 from bs4 import BeautifulSoup
 import json
 import os
 
-ZENROWS_API_KEY = '9f12e290f53e489c5b15b92dd18d6136f39d483b'
 URL = 'https://www.hdfilmcehennemi.nl/load/page/1/home/'
 
-print("Bot çalıştırıldı, ZenRows üzerinden siteye bağlanılıyor...")
-
-# Senin attığın orijinal parametre yapısına geri döndük!
-params = {
-    'url': URL,
-    'apikey': ZENROWS_API_KEY,
-    'mode': 'auto',
-}
+print("Bot çalıştırıldı, ZenRows iptal edildi. Gerçek Chrome taklidi yapılıyor...")
 
 try:
-    response = requests.get('https://api.zenrows.com/v1/', params=params)
-    response.raise_for_status() # Hata varsa burada kodu durdurur
+    # impersonate="chrome110" parametresi sihirli kelimedir. 
+    # Cloudflare'i gerçek bir insan tarayıcısı olduğuna inandırır.
+    response = requests.get(URL, impersonate="chrome110")
     
     # Gelen veri JSON da olabilir düz HTML de olabilir
     try:
@@ -37,7 +30,6 @@ try:
         if img:
             poster = img.get('data-src') or img.get('src')
             if title and href and poster:
-                # Başlığın gereksiz boşluklarını temizleyelim
                 title = title.strip()
                 movies.append({'title': title, 'href': href, 'poster': poster})
 
@@ -48,11 +40,8 @@ try:
             json.dump({'movies': movies}, f, ensure_ascii=False, indent=2)
         print(f"BAŞARILI: {len(movies)} film public/movies.json dosyasına kaydedildi.")
     else:
-        print("HATA: Site aşıldı ama film kartları bulunamadı. Gelen sayfa içeriğinin ilk 500 karakteri:")
-        print(html[:500]) # Eğer cloudflare aşılmazsa ne verdiğini görebilmek için
+        print("HATA: Site aşıldı ama film kartları bulunamadı.")
+        print("Gelen HTML:", html[:500])
         
 except Exception as e:
     print(f"KRİTİK HATA: {e}")
-    # Detaylı hatayı yakalamak için:
-    if 'response' in locals():
-        print(f"Hata Detayı: {response.text}")
