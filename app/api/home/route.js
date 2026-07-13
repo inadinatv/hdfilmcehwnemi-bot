@@ -1,40 +1,40 @@
-import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { NextResponse } from 'next/server';
 
+// İŞTE SİHİRLİ KOD: Vercel'in Cloudflare Edge altyapısını kullanmasını sağlar
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 
 const BASE_URL = 'https://www.hdfilmcehennemi.nl';
 
 export async function GET() {
   try {
-    // İstekleri AllOrigins Proxy'si üzerinden geçiriyoruz.
-    // Bu sayede Vercel'in kendi IP'si gizleniyor.
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`${BASE_URL}/load/page/1/home/`)}`;
+    const response = await fetch(`${BASE_URL}/load/page/1/home/`, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'X-Requested-With': 'fetch',
+        'Accept': 'application/json, text/plain, */*'
+      }
+    });
 
-    const response = await axios.get(proxyUrl);
-
-    // AllOrigins sonucu 'contents' objesi içinde JSON string olarak döndürür
-    const rawData = response.data.contents;
-    
-    if (!rawData) {
-      return NextResponse.json({ error: 'Proxy çalıştı ama içerik boş döndü.' }, { status: 500 });
+    if (!response.ok) {
+      return NextResponse.json({ error: `Site HTTP Hatası Döndürdü: ${response.status}` }, { status: 500 });
     }
 
-    // Gelen veri kendi içinde de bir JSON yapısı barındırıyor (hdfilmcehennemi'nin döndürdüğü yapı)
-    const parsedData = JSON.parse(rawData);
+    const data = await response.json();
     
-    if (!parsedData.html) {
-      return NextResponse.json({ error: 'Proxy içeriği çekti ama HTML verisi bulunamadı.' }, { status: 500 });
+    if (!data || !data.html) {
+      return NextResponse.json({ error: 'Edge bağlandı ama HTML boş döndü.' }, { status: 500 });
     }
 
-    const $ = cheerio.parseHTML(parsedData.html);
+    const $ = cheerio.load(data.html);
     const movies = [];
 
-    cheerio.load(parsedData.html)('a').each((i, el) => {
-      const title = cheerio(el).attr('title');
-      const href = cheerio(el).attr('href');
-      const poster = cheerio(el).find('img').attr('data-src') || cheerio(el).find('img').attr('src');
+    $('a').each((i, el) => {
+      const title = $(el).attr('title');
+      const href = $(el).attr('href');
+      const poster = $(el).find('img').attr('data-src') || $(el).find('img').attr('src');
 
       if (title && href) {
         movies.push({ title, href, poster });
@@ -42,13 +42,13 @@ export async function GET() {
     });
 
     if (movies.length === 0) {
-      return NextResponse.json({ error: 'Sayfa proxy üzerinden çekildi ama film kartları bulunamadı.' }, { status: 500 });
+      return NextResponse.json({ error: 'Veri çekildi ama film kartları bulunamadı.' }, { status: 500 });
     }
 
     return NextResponse.json({ movies });
   } catch (error) {
     return NextResponse.json({ 
-      error: 'Proxy üzerinden de siteye ulaşılamadı. Cloudflare Proxy sunucularını da engelliyor olabilir.',
+      error: 'Edge Proxy Hatası (Bağlantı Kurulamadı)',
       detay: error.message 
     }, { status: 500 });
   }
