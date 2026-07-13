@@ -2,30 +2,36 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { NextResponse } from 'next/server';
 
-// Next.js'in API'yi dondurmasını (cache) kesin olarak engelliyoruz
-export const dynamic = 'force-dynamic'; 
+export const dynamic = 'force-dynamic';
 
 const BASE_URL = 'https://www.hdfilmcehennemi.nl';
 
 export async function GET() {
   try {
-    const { data } = await axios.get(`${BASE_URL}/load/page/1/home/`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'X-Requested-With': 'fetch',
-      },
-      timeout: 10000 // 10 saniye bekleme süresi
-    });
+    // İstekleri AllOrigins Proxy'si üzerinden geçiriyoruz.
+    // Bu sayede Vercel'in kendi IP'si gizleniyor.
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`${BASE_URL}/load/page/1/home/`)}`;
 
-    if (!data || !data.html) {
-      return NextResponse.json({ error: 'Siteye bağlanıldı ama HTML verisi boş döndü.' }, { status: 500 });
+    const response = await axios.get(proxyUrl);
+
+    // AllOrigins sonucu 'contents' objesi içinde JSON string olarak döndürür
+    const rawData = response.data.contents;
+    
+    if (!rawData) {
+      return NextResponse.json({ error: 'Proxy çalıştı ama içerik boş döndü.' }, { status: 500 });
     }
 
-    const $ = cheerio.parseHTML(data.html);
+    // Gelen veri kendi içinde de bir JSON yapısı barındırıyor (hdfilmcehennemi'nin döndürdüğü yapı)
+    const parsedData = JSON.parse(rawData);
+    
+    if (!parsedData.html) {
+      return NextResponse.json({ error: 'Proxy içeriği çekti ama HTML verisi bulunamadı.' }, { status: 500 });
+    }
+
+    const $ = cheerio.parseHTML(parsedData.html);
     const movies = [];
 
-    cheerio.load(data.html)('a').each((i, el) => {
+    cheerio.load(parsedData.html)('a').each((i, el) => {
       const title = cheerio(el).attr('title');
       const href = cheerio(el).attr('href');
       const poster = cheerio(el).find('img').attr('data-src') || cheerio(el).find('img').attr('src');
@@ -36,14 +42,13 @@ export async function GET() {
     });
 
     if (movies.length === 0) {
-      return NextResponse.json({ error: 'Sayfa çekildi ama film kartları bulunamadı. Site yapısı değişmiş olabilir.' }, { status: 500 });
+      return NextResponse.json({ error: 'Sayfa proxy üzerinden çekildi ama film kartları bulunamadı.' }, { status: 500 });
     }
 
     return NextResponse.json({ movies });
   } catch (error) {
-    // Cloudflare engeli veya başka bir hatayı yakalıyoruz
     return NextResponse.json({ 
-      error: 'Vercel IP Adresi site tarafından engellendi (Cloudflare vb.) veya siteye ulaşılamadı.',
+      error: 'Proxy üzerinden de siteye ulaşılamadı. Cloudflare Proxy sunucularını da engelliyor olabilir.',
       detay: error.message 
     }, { status: 500 });
   }
