@@ -1,18 +1,19 @@
 {
   "name": "hdfilm-bot",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 0.0.0.0",
     "build": "next build",
-    "start": "next start"
+    "start": "next start -H 0.0.0.0",
+    "scrape": "python3 scraper.py",
+    "test:lib": "node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "axios": "^1.6.0",
-    "cheerio": "^1.0.0-rc.12",
+    "cheerio": "^1.0.0",
     "hls.js": "^1.5.0",
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest"
+    "next": "^15.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   }
 }
