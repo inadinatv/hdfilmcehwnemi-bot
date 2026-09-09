@@ -1,6 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dcDecodeParts, dcHelloLegacy, unpack, resolveVideoFromScript, parseCards, parseDetail, rewriteM3u8, parseTracks } from '../lib/hdfc.js';
+import {
+  dcDecodeParts,
+  dcHelloLegacy,
+  unpack,
+  resolveVideoFromScript,
+  parseCards,
+  parseDetail,
+  rewriteM3u8,
+  parseTracks,
+  encodeProxyUrl,
+  search,
+  resolveMovie,
+} from '../lib/hdfc.js';
 
 // ---- yardımcı: sitenin obfuscation'ını tersine üret ----
 const mix = (s) => { let o = ''; for (let i = 0; i < s.length; i++) o += String.fromCharCode((s.charCodeAt(i) + (399756995 % (i + 5))) % 256); return o; };
@@ -66,11 +78,12 @@ test('parseDetail sources', () => {
   assert.deepEqual(d.sources.map((s) => [s.videoId, s.name, s.lang]), [['v1', 'Close', 'TR'], ['v2', 'Rapidrame', 'TR'], ['v3', 'Close', 'EN']]);
 });
 
-test('rewriteM3u8', () => {
-  const m = `#EXTM3U\n#EXT-X-MEDIA:TYPE=AUDIO,URI="audio/tr.m3u8"\n#EXT-X-STREAM-INF:BANDWIDTH=1\nindex-f1.m3u8\n`;
-  const out = rewriteM3u8(m, 'https://cdn.example/hls/master.txt', 'https://ref/');
-  assert.match(out, /URI="\/api\/stream\?url=https%3A%2F%2Fcdn.example%2Fhls%2Faudio%2Ftr.m3u8&ref=/);
-  assert.match(out, /\n\/api\/stream\?url=https%3A%2F%2Fcdn.example%2Fhls%2Findex-f1.m3u8/);
+test('rewriteM3u8 handles audio, segments and AES-128 keys', () => {
+  const m = `#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI="enc.key",IV=0x123\n#EXT-X-MEDIA:TYPE=AUDIO,URI="audio/tr.m3u8"\n#EXT-X-STREAM-INF:BANDWIDTH=1\nindex-f1.m3u8\n`;
+  const out = rewriteM3u8(m, 'https://cdn.example/hls/master.txt', 'https://ref/', { key: 'secret123' });
+  assert.match(out, /URI="\/api\/stream\?url=https%3A%2F%2Fcdn.example%2Fhls%2Fenc\.key&ref=https%3A%2F%2Fref%2F&key=secret123"/);
+  assert.match(out, /URI="\/api\/stream\?url=https%3A%2F%2Fcdn.example%2Fhls%2Faudio%2Ftr\.m3u8&ref=https%3A%2F%2Fref%2F&key=secret123"/);
+  assert.match(out, /\n\/api\/stream\?url=https%3A%2F%2Fcdn.example%2Fhls%2Findex-f1\.m3u8/);
 });
 
 test('parseTracks', () => {
@@ -78,4 +91,29 @@ test('parseTracks', () => {
   const t = parseTracks(html, 'https://hdfilmcehennemi.mobi');
   assert.equal(t.length, 2);
   assert.equal(t[1].url, 'https://hdfilmcehennemi.mobi/subs/en.vtt');
+});
+
+test('encodeProxyUrl attaches query parameters', () => {
+  const url = encodeProxyUrl('https://example.com/playlist.m3u8', 'https://ref.com/', { key: 'my-key', token: 'tok123' });
+  assert.match(url, /^\/api\/stream\?/);
+  assert.match(url, /url=https%3A%2F%2Fexample\.com%2Fplaylist\.m3u8/);
+  assert.match(url, /ref=https%3A%2F%2Fref\.com%2F/);
+  assert.match(url, /key=my-key/);
+  assert.match(url, /token=tok123/);
+});
+
+test('search finds movies by title, genre, and cast', async () => {
+  const results = await search('Oppenheimer');
+  assert.ok(results.length > 0);
+  assert.equal(results[0].title, 'Oppenheimer');
+
+  const sciFi = await search('Nolan');
+  assert.ok(sciFi.length > 0);
+});
+
+test('resolveMovie returns working fallback sources with subtitles when offline', async () => {
+  const res = await resolveMovie('https://www.hdfilmcehennemi.nl/dune-part-two-2024/');
+  assert.ok(res.title.includes('Dune'));
+  assert.ok(res.sources.length >= 1);
+  assert.ok(res.sources[0].m3u8.includes('.m3u8'));
 });
