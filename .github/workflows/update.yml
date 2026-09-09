@@ -1,32 +1,50 @@
-name: Film Vitrinini Guncelle
+name: Film Kataloğunu Güncelle
 
 on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
+    inputs:
+      max_pages:
+        description: 'Kategori başına en fazla sayfa'
+        default: '400'
+      enrich:
+        description: 'Detay sayfalarından zenginleştir (1/0)'
+        default: '0'
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  scrape:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - name: Depoyu Klonla
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Python Kurulumu
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.12'
+          cache: pip
 
       - name: Kütüphaneleri Yükle
-        run: pip install requests beautifulsoup4
+        run: pip install -r requirements.txt
 
-      - name: Botu Çalıştır (Google Bypass)
+      - name: Botu Çalıştır (tüm kategoriler)
+        env:
+          MAX_PAGES: ${{ github.event.inputs.max_pages || '400' }}
+          ENRICH: ${{ github.event.inputs.enrich || '0' }}
+          WORKERS: '6'
+          ZENROWS_API_KEY: ${{ secrets.ZENROWS_API_KEY }}
+          SCRAPERAPI_KEY: ${{ secrets.SCRAPERAPI_KEY }}
         run: python scraper.py
 
-      - name: Değişiklikleri GitHub'a Kaydet
+      - name: Değişiklikleri Kaydet
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/ || echo "Public klasörü henüz oluşmadı."
-          git commit -m "🤖 Vitrin Güncellendi" || echo "Kaydedilecek yeni bir sey yok."
-          git push || echo "Gonderim hatasi."
+          git add public/movies.json
+          git commit -m "🤖 Katalog güncellendi ($(date -u +'%Y-%m-%d %H:%M UTC'))" || echo "Değişiklik yok."
+          git push || echo "Gönderim hatası."
