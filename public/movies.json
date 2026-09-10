@@ -1,8 +1,10 @@
 {
-  "updatedAt": "2026-09-09T21:46:57+00:00",
-  "source": "https://hdfilmcehennemi.la",
+  "updatedAt": "2026-09-10T03:13:34+00:00",
+  "source": "https://hdfilmcehennemini.org",
   "total": 23,
-  "strategies": {},
+  "strategies": {
+    "direct": 60
+  },
   "categories": [
     {
       "name": "IMDb 7+",
