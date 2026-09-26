@@ -1,255 +1,38 @@
 <!doctype html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Film JSON & Player Testi</title>
-  <style>
-    :root {
-      --bg: #0d0f14;
-      --panel: #171a22;
-      --panel-2: #202532;
-      --text: #f5f7fb;
-      --muted: #9aa4b2;
-      --accent: #e50914;
-      --border: #303746;
-      --radius: 12px;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    button, input { font: inherit; }
-    .wrap { width: min(1180px, 100%); margin: auto; padding: 16px; }
-    header {
-      position: sticky; top: 0; z-index: 5;
-      background: rgba(13,15,20,.95); backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--border); padding: 12px 0;
-    }
-    h1 { font-size: 20px; margin: 0 0 4px; }
-    h2 { font-size: 18px; margin: 0 0 12px; }
-    .sub, .status { color: var(--muted); font-size: 13px; }
-    .toolbar { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 14px; }
-    input {
-      width: 100%; color: var(--text); background: var(--panel);
-      border: 1px solid var(--border); border-radius: 9px; padding: 11px 12px; outline: none;
-    }
-    input:focus { border-color: #697386; }
-    button, .link {
-      border: 0; border-radius: 9px; padding: 10px 13px; cursor: pointer;
-      color: white; background: var(--accent); text-decoration: none; display: inline-flex;
-      justify-content: center; align-items: center; gap: 6px;
-    }
-    button.secondary, .link.secondary { background: var(--panel-2); border: 1px solid var(--border); }
-    .status { padding: 12px 0; }
-    .grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
-      gap: 12px;
-    }
-    .card {
-      overflow: hidden; background: var(--panel); border: 1px solid var(--border);
-      border-radius: var(--radius); cursor: pointer; min-width: 0;
-    }
-    .card img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; display: block; background: #252a35; }
-    .card-body { padding: 9px; }
-    .card-title { font-size: 13px; font-weight: 700; line-height: 1.25; min-height: 34px; }
-    .meta { color: var(--muted); font-size: 12px; margin-top: 5px; }
-    .empty { color: var(--muted); text-align: center; padding: 36px 12px; }
-    .modal {
-      display: none; position: fixed; inset: 0; z-index: 10; background: rgba(0,0,0,.78);
-      padding: 12px; overflow: auto;
-    }
-    .modal.open { display: block; }
-    .dialog {
-      width: min(980px, 100%); margin: 20px auto; background: var(--panel);
-      border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
-    }
-    .dialog-head { display: flex; align-items: start; justify-content: space-between; gap: 12px; padding: 14px; }
-    .dialog-head h2 { margin: 0; }
-    .close { background: transparent; color: var(--muted); font-size: 22px; padding: 0 5px; }
-    .details { display: grid; grid-template-columns: 150px 1fr; gap: 16px; padding: 0 14px 14px; }
-    .details img { width: 100%; border-radius: 8px; background: #252a35; }
-    .description { color: #d4d9e2; font-size: 14px; line-height: 1.5; }
-    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-    .badge { color: #dce2ed; background: var(--panel-2); border: 1px solid var(--border); border-radius: 99px; padding: 4px 8px; font-size: 12px; }
-    .sources { padding: 14px; border-top: 1px solid var(--border); }
-    .source-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-    .player-wrap { background: #000; aspect-ratio: 16 / 9; width: 100%; }
-    .player-wrap iframe { border: 0; width: 100%; height: 100%; display: block; }
-    .player-note { color: var(--muted); font-size: 12px; margin-top: 9px; }
-    @media (max-width: 560px) {
-      .toolbar { grid-template-columns: 1fr; }
-      .details { grid-template-columns: 100px 1fr; gap: 10px; }
-      .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-      .card-title { font-size: 11px; }
-      .card-body { padding: 7px; }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ar TV · Film Kataloğu</title>
+<style>
+:root{--bg:#090b10;--panel:#121620;--panel2:#1a2030;--line:#2b3445;--text:#f4f6fb;--muted:#9aa6b7;--red:#e50914;--gold:#ffc857;--radius:15px}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 10% 0,#1b202d 0,#090b10 38%);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,sans-serif}.wrap{width:min(1240px,100%);margin:auto;padding:16px}.top{position:sticky;top:0;z-index:5;background:rgba(9,11,16,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}.head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.brand{font-size:23px;font-weight:900;letter-spacing:.4px}.brand b{color:var(--red)}.sub{color:var(--muted);font-size:12px}.search{flex:1;min-width:220px;position:relative}.search input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);outline:0}.search input:focus{border-color:#65738a}.status{color:var(--muted);font-size:12px;padding:13px 0 5px}.chips{display:flex;gap:8px;overflow:auto;padding:8px 0 14px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chip{white-space:nowrap;padding:8px 12px;border-radius:99px;border:1px solid var(--line);background:var(--panel);color:#dce3ee;cursor:pointer}.chip.on,.chip:hover{background:var(--red);border-color:var(--red);color:white}.grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}.card{position:relative;overflow:hidden;background:linear-gradient(145deg,#171c27,#10131b);border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;transition:transform .18s,box-shadow .18s}.card:hover{transform:translateY(-4px);box-shadow:0 12px 30px #0009}.poster{width:100%;aspect-ratio:2/3;display:block;object-fit:cover;background:#242b38}.cardbody{padding:10px}.title{font-weight:800;font-size:13px;line-height:1.25;min-height:33px}.meta{color:var(--muted);font-size:12px;margin-top:5px}.rate{color:var(--gold)}.tag{position:absolute;left:8px;top:8px;padding:4px 7px;border-radius:7px;background:#000b;color:#fff;font-size:11px}.empty{padding:50px;text-align:center;color:var(--muted);grid-column:1/-1}.modal{display:none;position:fixed;inset:0;z-index:20;padding:12px;overflow:auto;background:#000c}.modal.open{display:block}.box{width:min(980px,100%);margin:20px auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:0 25px 80px #000}.modalhead{display:flex;justify-content:space-between;gap:12px;padding:15px;border-bottom:1px solid var(--line)}h1,h2,h3{margin:0}h2{font-size:19px}.close{border:0;background:transparent;color:var(--muted);font-size:27px;cursor:pointer}.info{display:grid;grid-template-columns:145px 1fr;gap:16px;padding:15px}.detailposter{width:100%;border-radius:9px}.desc{color:#d8deea;line-height:1.55;margin:8px 0 14px}.badges,.sources{display:flex;flex-wrap:wrap;gap:7px}.badge{padding:5px 8px;border:1px solid var(--line);background:var(--panel2);border-radius:99px;color:#dce3ee;font-size:12px}.btn,.link{padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:white;cursor:pointer;text-decoration:none}.btn.on,.btn:hover,.link:hover{background:var(--red);border-color:var(--red)}.playersection{padding:15px;border-top:1px solid var(--line)}.player{background:#000;aspect-ratio:16/9;border-radius:10px;overflow:hidden;margin-top:12px}.player iframe,.player video{width:100%;height:100%;border:0;display:block}.note{color:var(--muted);font-size:12px;margin-top:9px;line-height:1.4}@media(max-width:950px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:620px){.wrap{padding:12px}.head{gap:8px}.brand{font-size:20px}.grid{display:flex;flex-direction:column;gap:9px}.card{display:grid;grid-template-columns:74px 1fr;min-height:104px;align-items:stretch}.poster{width:74px;height:104px;aspect-ratio:auto}.cardbody{display:flex;flex-direction:column;justify-content:center;padding:10px 12px}.title{font-size:14px;min-height:auto}.tag{left:50px;top:7px;font-size:10px}.info{grid-template-columns:96px 1fr;gap:10px;padding:12px}.box{margin:5px auto}.modalhead{padding:12px}.playersection{padding:12px}}
+</style>
 </head>
 <body>
-  <header>
-    <div class="wrap">
-      <h1>Film JSON & HTML Player Testi</h1>
-      <div class="sub">AppCreator24 WebView uyumlu örnek sayfa</div>
-      <div class="toolbar">
-        <!-- JSON dosyanızın herkese açık HTTPS adresini buraya yazın. -->
-        <input id="jsonUrl" value="./movies.json" aria-label="JSON adresi" placeholder="https://alanadiniz.com/movies.json">
-        <button id="loadBtn">JSON Yükle</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="wrap">
-    <div class="toolbar">
-      <input id="search" placeholder="Film ara..." aria-label="Film ara">
-      <button id="clearBtn" class="secondary">Temizle</button>
-    </div>
-    <div id="status" class="status">JSON yükleniyor...</div>
-    <section id="grid" class="grid"></section>
-  </main>
-
-  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-label="Film player">
-    <div class="dialog">
-      <div class="dialog-head">
-        <h2 id="detailTitle">Film</h2>
-        <button id="closeBtn" class="close" aria-label="Kapat">×</button>
-      </div>
-      <div class="details">
-        <img id="detailPoster" alt="Film afişi">
-        <div>
-          <div id="badges" class="badges"></div>
-          <p id="description" class="description">Açıklama bulunamadı.</p>
-          <a id="pageLink" class="link secondary" target="_blank" rel="noopener noreferrer">Film sayfasını aç ↗</a>
-        </div>
-      </div>
-      <div class="sources">
-        <h2>Player kaynakları</h2>
-        <div id="sourceList" class="source-list"></div>
-        <div id="player" class="player-wrap"></div>
-        <div id="playerNote" class="player-note"></div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // JSON şeması: { movies: [{ title, poster, href, year, imdb, genres, description, iframes: [...] }] }
-    const state = { movies: [], selected: null };
-    const $ = (id) => document.getElementById(id);
-
-    function normalize(data) {
-      if (Array.isArray(data)) return data;
-      if (Array.isArray(data.movies)) return data.movies;
-      // Eski örnek formatı: { "id": { "isim": ..., "resim": ..., "link": ... } }
-      return Object.values(data || {}).filter((x) => x && typeof x === 'object');
-    }
-
-    function titleOf(movie) { return movie.title || movie.isim || 'Başlıksız film'; }
-    function posterOf(movie) { return movie.poster || movie.resim || 'https://via.placeholder.com/300x450?text=Poster+Yok'; }
-    function hrefOf(movie) { return movie.href || movie.link || '#'; }
-    function framesOf(movie) {
-      if (Array.isArray(movie.iframes)) return movie.iframes.filter((x) => x && (x.src || x.dataSrc));
-      // Eski format için geriye dönük destek.
-      if (movie.iframe) return [{ type: 'iframe', src: movie.iframe, className: '' }];
-      return [];
-    }
-
-    function render() {
-      const term = $('search').value.trim().toLocaleLowerCase('tr');
-      const list = state.movies.filter((m) => titleOf(m).toLocaleLowerCase('tr').includes(term));
-      $('status').textContent = `${list.length} film gösteriliyor · Toplam ${state.movies.length} kayıt`;
-      $('grid').innerHTML = '';
-      if (!list.length) {
-        $('grid').innerHTML = '<div class="empty">Film bulunamadı.</div>';
-        return;
-      }
-      list.forEach((movie) => {
-        const card = document.createElement('article');
-        card.className = 'card';
-        card.innerHTML = `
-          <img loading="lazy" src="${escapeAttr(posterOf(movie))}" alt="${escapeAttr(titleOf(movie))}">
-          <div class="card-body">
-            <div class="card-title">${escapeHtml(titleOf(movie))}</div>
-            <div class="meta">${movie.year || '—'} · ${movie.imdb ? `★ ${movie.imdb}` : 'IMDb —'}</div>
-          </div>`;
-        card.addEventListener('click', () => openMovie(movie));
-        $('grid').appendChild(card);
-      });
-    }
-
-    function openMovie(movie) {
-      state.selected = movie;
-      $('detailTitle').textContent = titleOf(movie);
-      $('detailPoster').src = posterOf(movie);
-      $('detailPoster').alt = titleOf(movie);
-      $('description').textContent = movie.description || movie.ozet || 'Açıklama bulunamadı.';
-      $('pageLink').href = hrefOf(movie);
-      $('badges').innerHTML = '';
-      [movie.year, movie.imdb ? `★ ${movie.imdb}` : '', ...(movie.genres || [])].filter(Boolean).forEach((x) => {
-        const b = document.createElement('span'); b.className = 'badge'; b.textContent = x; $('badges').appendChild(b);
-      });
-
-      const frames = framesOf(movie);
-      $('sourceList').innerHTML = '';
-      $('player').innerHTML = '';
-      if (!frames.length) {
-        $('sourceList').innerHTML = '<span class="sub">Bu kayıtta görünür iframe bulunamadı.</span>';
-        $('playerNote').textContent = 'Film sayfasını aç düğmesiyle kaynak sayfayı ayrı sekmede deneyebilirsiniz.';
-      } else {
-        frames.forEach((frame, index) => {
-          const src = frame.src || frame.dataSrc;
-          const btn = document.createElement('button');
-          btn.className = index === 0 ? '' : 'secondary';
-          btn.textContent = frame.className || `Kaynak ${index + 1}`;
-          btn.addEventListener('click', () => showFrame(frame));
-          $('sourceList').appendChild(btn);
-          if (index === 0) showFrame(frame);
-        });
-        $('playerNote').textContent = 'Player görünmüyorsa iframe sağlayıcısı gömme izni vermiyor olabilir. Bu durumda Film sayfasını aç seçeneğini kullanın.';
-      }
-      $('modal').classList.add('open');
-    }
-
-    function showFrame(frame) {
-      const src = frame.src || frame.dataSrc;
-      if (!src) return;
-      $('player').innerHTML = '';
-      const iframe = document.createElement('iframe');
-      iframe.src = src;
-      iframe.title = frame.title || 'Film player';
-      iframe.allow = frame.allow || 'autoplay; fullscreen; encrypted-media; picture-in-picture';
-      iframe.allowFullscreen = frame.allowFullscreen !== false;
-      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-      $('player').appendChild(iframe);
-    }
-
-    async function loadJson() {
-      $('status').textContent = 'JSON yükleniyor...';
-      try {
-        const response = await fetch($('jsonUrl').value.trim(), { cache: 'no-store' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        state.movies = normalize(await response.json());
-        render();
-      } catch (error) {
-        state.movies = [];
-        $('grid').innerHTML = '<div class="empty">JSON yüklenemedi.</div>';
-        $('status').textContent = `Hata: ${error.message}. CORS ve HTTPS adresini kontrol edin.`;
-      }
-    }
-
-    function escapeHtml(value) {
-      return String(value).replace(/[&<>'"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-    }
-    function escapeAttr(value) { return escapeHtml(value); }
-
-    $('loadBtn').addEventListener('click', loadJson);
-    $('search').addEventListener('input', render);
-    $('clearBtn').addEventListener('click', () => { $('search').value = ''; render(); });
-    $('closeBtn').addEventListener('click', () => { $('modal').classList.remove('open'); $('player').innerHTML = ''; });
-    $('modal').addEventListener('click', (e) => { if (e.target === $('modal')) $('closeBtn').click(); });
-    loadJson();
-  </script>
+<header class="top"><div class="wrap"><div class="head"><div><div class="brand">Ar <b>TV</b></div><div class="sub">JSON film kataloğu · HTML player</div></div><div class="search"><input id="search" placeholder="Film, oyuncu veya tür ara..." autocomplete="off"></div><button class="btn" id="reload">Yenile</button></div><div id="status" class="status">JSON yükleniyor...</div><nav id="chips" class="chips"></nav></div></header>
+<main class="wrap"><section id="grid" class="grid"></section></main>
+<div id="modal" class="modal"><div class="box"><div class="modalhead"><h2 id="mtitle">Film</h2><button class="close" id="close">×</button></div><div class="info"><img id="mposter" class="detailposter" alt=""><div><div id="badges" class="badges"></div><p id="desc" class="desc"></p><div class="actions"><a id="pagelink" class="link" target="_blank" rel="noopener noreferrer">Film sayfasını aç ↗</a></div></div></div><section class="playersection"><h3>Oynatma kaynakları</h3><div id="sources" class="sources" style="margin-top:10px"></div><div id="player" class="player"></div><div id="note" class="note"></div></section></div></div>
+<script>
+const JSON_URL='./movies.json';
+const state={movies:[],category:'Tümü',selected:null};
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const title=m=>m.title||m.isim||'Başlıksız film';
+const poster=m=>m.poster||m.resim||'https://via.placeholder.com/300x450?text=Poster';
+const page=m=>m.href||m.link||'#';
+const frames=m=>Array.isArray(m.iframes)?m.iframes.filter(x=>x&&(x.src||x.dataSrc)):(m.iframe?[{src:m.iframe,className:'iframe'}]:[]);
+const streams=m=>Array.isArray(m.sources)?m.sources.filter(x=>x&&(x.proxyUrl||x.m3u8Url||x.url)):[];
+function normalize(d){if(Array.isArray(d))return d;if(Array.isArray(d.movies))return d.movies;return Object.values(d||{}).filter(x=>x&&typeof x==='object'&&(x.title||x.isim));}
+function allCategories(){const c=new Set(['Tümü']);state.movies.forEach(m=>(m.categories||m.genres||[]).forEach(x=>c.add(x)));return [...c];}
+function renderChips(){ $('chips').innerHTML=allCategories().slice(0,40).map(c=>`<button class="chip ${c===state.category?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');$('chips').querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{state.category=b.dataset.cat;renderChips();renderGrid()}); }
+function matches(m,q){const hay=[title(m),m.originalTitle,m.description,m.director,...(m.cast||[]),...(m.genres||[]),...(m.categories||[])].filter(Boolean).join(' ').toLocaleLowerCase('tr');return !q||hay.includes(q)}
+function renderGrid(){const q=$('search').value.trim().toLocaleLowerCase('tr');const list=state.movies.filter(m=>(state.category==='Tümü'||(m.categories||[]).includes(state.category)||(m.genres||[]).includes(state.category))&&matches(m,q));$('status').textContent=`${list.length} film · ${state.movies.length} kayıt · Kategori: ${state.category}`;$('grid').innerHTML=list.length?'':'<div class="empty">Film bulunamadı.</div>';list.forEach(m=>{const el=document.createElement('article');el.className='card';const sourceCount=frames(m).length+streams(m).length;el.innerHTML=`<img class="poster" loading="lazy" src="${esc(poster(m))}" alt="${esc(title(m))}"><div class="cardbody"><div class="title">${esc(title(m))}</div><div class="meta">${m.year||'—'} · <span class="rate">★ ${m.imdb||'—'}</span>${sourceCount?` · ${sourceCount} kaynak`:''}</div></div>${m.quality?`<span class="tag">${esc(m.quality)}</span>`:''}`;el.onclick=()=>openMovie(m);$('grid').appendChild(el)});}
+function openMovie(m){state.selected=m;$('mtitle').textContent=title(m);$('mposter').src=poster(m);$('mposter').alt=title(m);$('desc').textContent=m.description||m.ozet||'Açıklama bulunamadı.';$('pagelink').href=page(m);$('badges').innerHTML=[m.year,m.imdb?`★ ${m.imdb}`:'',...(m.genres||[])].filter(Boolean).map(x=>`<span class="badge">${esc(x)}</span>`).join('');$('sources').innerHTML='';$('player').innerHTML='';const fs=frames(m),ss=streams(m);fs.forEach((x,i)=>addSource(x.className||`Iframe ${i+1}`,()=>showIframe(x),i===0));ss.forEach((x,i)=>addSource(x.name||`Akış ${i+1}`,()=>showStream(x),fs.length===0&&i===0));if(!fs.length&&!ss.length){$('note').textContent='Bu kayıtta görünür player kaynağı yok. Film sayfasını aç düğmesini kullanabilirsiniz.'}else{$('note').textContent='Player sağlayıcısı gömme iznini kapatmışsa kaynak sayfasını yeni sekmede açın.'}$('modal').classList.add('open');}
+function addSource(label,fn,on){const b=document.createElement('button');b.className='btn'+(on?' on':'');b.textContent=label;b.onclick=fn;$('sources').appendChild(b);if(on)fn()}
+function showIframe(x){const src=x.src||x.dataSrc;if(!src)return;$('player').innerHTML=`<iframe src="${esc(src)}" title="${esc(x.title||'Film player')}" allow="${esc(x.allow||'autoplay; fullscreen; encrypted-media; picture-in-picture')}" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`}
+function showStream(x){const src=x.proxyUrl||x.m3u8Url||x.url;if(!src)return;$('player').innerHTML=`<video controls playsinline preload="metadata" src="${esc(src)}"></video>`}
+async function load(){try{const r=await fetch(JSON_URL,{cache:'no-store'});if(!r.ok)throw Error(`HTTP ${r.status}`);state.movies=normalize(await r.json());renderChips();renderGrid()}catch(e){$('status').textContent=`JSON yüklenemedi: ${e.message}`;$('grid').innerHTML='<div class="empty">movies.json dosyası bulunamadı veya CORS engeli var.</div>'}}
+$('search').oninput=renderGrid;$('reload').onclick=load;$('close').onclick=()=>{$('modal').classList.remove('open');$('player').innerHTML=''};$('modal').onclick=e=>{if(e.target===$('modal'))$('close').click()};load();
+</script>
 </body>
 </html>
