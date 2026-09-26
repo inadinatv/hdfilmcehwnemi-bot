@@ -442,7 +442,12 @@ def parse_detail_page(html: str, page_url: str) -> dict:
 
 def enrich_card(card: dict) -> dict:
     """Fetch one public detail page and merge its metadata into a catalog card."""
-    html = fetcher.get(card.get("href", ""), api=False, timeout=12, retries=1)
+    href = card.get("href", "")
+    parsed = urlparse(href)
+    # Use a relative path so Fetcher can try the active domain, mirrors and
+    # approved public fallbacks instead of pinning requests to a stale host.
+    detail_path = (parsed.path or "/") + (f"?{parsed.query}" if parsed.query else "")
+    html = fetcher.get(detail_path, api=False, timeout=12, retries=1)
     if not html:
         return {**card, "iframeStatus": "fetch_failed", "iframes": []}
     detail = parse_detail_page(html, card["href"])
