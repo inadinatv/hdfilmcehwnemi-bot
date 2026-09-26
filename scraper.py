@@ -31,7 +31,7 @@ import time
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-from urllib.parse import urlparse, quote
+from urllib.parse import urlparse, quote, urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -61,6 +61,8 @@ MAX_PAGES = int(os.getenv("MAX_PAGES", "10"))
 WORKERS = int(os.getenv("WORKERS", "6"))
 ENRICH = os.getenv("ENRICH", "0") == "1"
 ENRICH_LIMIT = int(os.getenv("ENRICH_LIMIT", "50"))
+ENRICH_DELAY = float(os.getenv("ENRICH_DELAY", "0.35"))
+DETAIL_WORKERS = max(1, int(os.getenv("DETAIL_WORKERS", "3")))
 SKIP_YEARS = os.getenv("SKIP_YEARS", "0") == "1"
 ZENROWS_API_KEY = os.getenv("ZENROWS_API_KEY", "").strip()
 SCRAPERAPI_KEY = os.getenv("SCRAPERAPI_KEY", "").strip()
@@ -355,6 +357,125 @@ class Catalog:
 
 catalog = Catalog()
 
+
+def _text(soup: BeautifulSoup, selectors: str) -> str | None:
+    el = soup.select_one(selectors)
+    value = el.get_text(" ", strip=True) if el else ""
+    return re.sub(r"\s+", " ", value).strip() or None
+
+
+def _number(text: str | None) -> float | None:
+    if not text:
+        return None
+    m = re.search(r"\d+(?:[.,]\d+)?", text)
+    return float(m.group(0).replace(",", ".")) if m else None
+
+
+def _same_or_allowed_frame(url: str) -> bool:
+    """Allow only the site's public player hosts; do not follow nested frames."""
+    try:
+        host = (urlparse(url).hostname or "").lower().rstrip(".")
+    except Exception:
+        return False
+    base_host = (urlparse(BASE_URL).hostname or "").lower().rstrip(".")
+    return host == base_host or host.endswith(".hdfilmcehennemi.la") or host == "hdfilmcehennemi.mobi"
+
+
+def parse_detail_page(html: str, page_url: str) -> dict:
+    """Extract public metadata and visible iframe attributes only.
+
+    This deliberately does not inspect iframe documents, scripts, packed code,
+    HLS manifests, keys, tokens, or nested player requests.
+    """
+    soup = BeautifulSoup(html or "", "html.parser")
+    title = _text(soup, "h1.section-title, .section-title, h1")
+    if title:
+        title = re.split(r"\s+izle\b", title, maxsplit=1, flags=re.I)[0].strip()
+
+    year_country = [a.get_text(" ", strip=True) for a in soup.select(".post-info-year-country a")]
+    year = next((int(x) for x in year_country if re.fullmatch(r"\d{4}", x)), None)
+    country = next((x for x in year_country if not re.fullmatch(r"\d{4}", x)), None)
+    genres = [a.get_text(" ", strip=True) for a in soup.select(".post-info-genres a") if a.get_text(strip=True)]
+    cast = [a.get_text(" ", strip=True) for a in soup.select(".post-info-cast a") if a.get_text(strip=True)]
+
+    iframes = []
+    for frame in soup.select("iframe"):
+        raw = frame.get("data-src") or frame.get("src")
+        if not raw:
+            continue
+        src = urljoin(page_url, raw.strip())
+        # Ignore blank/hidden utility frames and unrelated third-party frames.
+        if not _same_or_allowed_frame(src):
+            continue
+        width = str(frame.get("width") or "").strip()
+        height = str(frame.get("height") or "").strip()
+        if width == "1" and height == "1":
+            continue
+        if not frame.get("class") and not frame.get("data-src") and not frame.get("src"):
+            continue
+        iframes.append({
+            "type": "iframe",
+            "src": src,
+            "dataSrc": urljoin(page_url, frame.get("data-src")) if frame.get("data-src") else None,
+            "className": " ".join(frame.get("class") or []),
+            "title": frame.get("title"),
+            "allow": frame.get("allow"),
+            "allowFullscreen": frame.has_attr("allowfullscreen"),
+        })
+
+    return {
+        "title": title,
+        "originalTitle": _text(soup, ".original-title, .post-info-original-title"),
+        "year": year,
+        "country": country,
+        "imdb": _number(_text(soup, ".post-info-imdb-rating span, .imdb")),
+        "duration": _text(soup, ".post-info-duration"),
+        "genres": genres,
+        "description": _text(soup, "article.post-info-content > p, .post-info-content > p"),
+        "poster": fix_url((soup.select_one("aside.post-info-poster img, .post-info-poster img") or {}).get("data-src") if soup.select_one("aside.post-info-poster img, .post-info-poster img") else None),
+        "cast": cast,
+        "iframes": iframes,
+        "iframeStatus": "found" if iframes else "not_found",
+        "detailFetchedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+
+
+def enrich_card(card: dict) -> dict:
+    """Fetch one public detail page and merge its metadata into a catalog card."""
+    html = fetcher.get(card.get("href", ""), api=False, timeout=12, retries=1)
+    if not html:
+        return {**card, "iframeStatus": "fetch_failed", "iframes": []}
+    detail = parse_detail_page(html, card["href"])
+    merged = dict(card)
+    for key in ("title", "originalTitle", "year", "country", "imdb", "duration", "genres", "description", "poster", "cast"):
+        if detail.get(key):
+            merged[key] = detail[key]
+    merged["iframes"] = detail["iframes"]
+    merged["iframeStatus"] = detail["iframeStatus"]
+    merged["detailFetchedAt"] = detail["detailFetchedAt"]
+    return merged
+
+
+def enrich_catalog(limit: int = ENRICH_LIMIT) -> None:
+    """Add public detail/iframe data to a bounded number of catalog records."""
+    cards = list(catalog.movies.values())
+    cards.sort(key=lambda m: ("Yeni Eklenenler" not in m.get("categories", []), m.get("title", "")))
+    targets = cards[:max(0, limit)] if limit > 0 else cards
+    if not targets:
+        return
+    log(f"🔎 Açık detay/iframe verisi okunuyor: {len(targets)} film (işçi: {DETAIL_WORKERS})")
+    with ThreadPoolExecutor(max_workers=DETAIL_WORKERS) as ex:
+        futures = {ex.submit(enrich_card, card): card["id"] for card in targets}
+        for future in as_completed(futures):
+            sid = futures[future]
+            try:
+                updated = future.result()
+                with catalog.lock:
+                    catalog.movies[sid] = updated
+            except Exception as exc:
+                log(f"⚠ Detay alınamadı: {sid} ({exc})")
+            time.sleep(ENRICH_DELAY)
+
 def crawl_load_path(name: str, path: str, group: str, max_pages: int = MAX_PAGES) -> int:
     total = 0
     empty_streak = 0
@@ -440,7 +561,12 @@ def main() -> int:
                 elif not cur.get(k) and v:
                     cur[k] = v
 
-    # 4) Kategori sayaçlarını yeniden hesapla
+    # 5) Ayrı ve isteğe bağlı aşama: herkese açık detay metadata + iframe attrs.
+    #    iframe içeriği, script/manifest/key/token çözümlemesi yapılmaz.
+    if ENRICH:
+        enrich_catalog()
+
+    # 6) Kategori sayaçlarını yeniden hesapla
     counts: dict[str, int] = {}
     for m in catalog.movies.values():
         for c in m.get("categories", []):
