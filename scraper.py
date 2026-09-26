@@ -176,7 +176,8 @@ class Fetcher:
                 if not absolute:
                     headers["Referer"] = base + "/"
                 text = self._try(self.session, url, headers, method, data, files, timeout)
-                if text is not None:
+                # Empty text is a failed/404 response; continue with the next mirror.
+                if text:
                     if base and base != self.active_base:
                         log(f"↪ Aktif domain: {base}")
                         self.active_base = base
@@ -187,7 +188,7 @@ class Fetcher:
             if self.cs is not None:
                 url = path_or_url if absolute else f"{self.active_base}{path_or_url}"
                 text = self._try(self.cs, url, headers, method, data, files, timeout)
-                if text is not None:
+                if text:
                     self._bump("cloudscraper")
                     return text
 
