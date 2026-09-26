@@ -10,7 +10,16 @@ on:
         default: '400'
       enrich:
         description: 'Detay sayfalarından zenginleştir (1/0)'
-        default: '0'
+        default: '1'
+      enrich_limit:
+        description: 'Enrichment uygulanacak film sayısı (0=tümü)'
+        default: '100'
+      detail_workers:
+        description: 'Detay istekleri için eşzamanlı işçi sayısı'
+        default: '2'
+      enrich_delay:
+        description: 'Detay istekleri arasındaki saniye gecikmesi'
+        default: '1'
 
 permissions:
   contents: write
@@ -35,7 +44,10 @@ jobs:
       - name: Botu Çalıştır (tüm kategoriler)
         env:
           MAX_PAGES: ${{ github.event.inputs.max_pages || '400' }}
-          ENRICH: ${{ github.event.inputs.enrich || '0' }}
+          ENRICH: ${{ github.event.inputs.enrich || '1' }}
+          ENRICH_LIMIT: ${{ github.event.inputs.enrich_limit || '100' }}
+          DETAIL_WORKERS: ${{ github.event.inputs.detail_workers || '2' }}
+          ENRICH_DELAY: ${{ github.event.inputs.enrich_delay || '1' }}
           WORKERS: '6'
           ZENROWS_API_KEY: ${{ secrets.ZENROWS_API_KEY }}
           SCRAPERAPI_KEY: ${{ secrets.SCRAPERAPI_KEY }}
