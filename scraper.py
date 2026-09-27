@@ -56,6 +56,7 @@ MIRRORS = [
     "https://hdfilmcehennemi.life",
 ]
 MIRRORS = list(dict.fromkeys(MIRRORS))
+IFRAME_HOST_ALLOWLIST = {h.strip().lower().rstrip(".") for h in os.getenv("IFRAME_HOST_ALLOWLIST", "").split(",") if h.strip()}
 
 MAX_PAGES = int(os.getenv("MAX_PAGES", "10"))
 WORKERS = int(os.getenv("WORKERS", "6"))
@@ -379,7 +380,64 @@ def _same_or_allowed_frame(url: str) -> bool:
     except Exception:
         return False
     base_host = (urlparse(BASE_URL).hostname or "").lower().rstrip(".")
-    return host == base_host or host.endswith(".hdfilmcehennemi.la") or host == "hdfilmcehennemi.mobi"
+    configured = host in IFRAME_HOST_ALLOWLIST or any(host.endswith("." + h) for h in IFRAME_HOST_ALLOWLIST)
+    return (host == base_host or host.endswith(".hdfilmcehennemi.la") or
+            host == "hdfilmcehennemi.mobi" or configured)
+
+
+def _visible_iframe_attrs(html: str, page_url: str, source_name: str | None = None, language: str | None = None) -> list[dict]:
+    """Read only literal iframe attributes from an HTML response."""
+    soup = BeautifulSoup(html or "", "html.parser")
+    out = []
+    for frame in soup.select("iframe"):
+        raw = frame.get("data-src") or frame.get("src")
+        if not raw:
+            continue
+        src = urljoin(page_url, raw.strip())
+        if not _same_or_allowed_frame(src):
+            continue
+        if frame.get("width") == "1" and frame.get("height") == "1":
+            continue
+        out.append({
+            "type": "iframe", "src": src,
+            "dataSrc": urljoin(page_url, frame.get("data-src")) if frame.get("data-src") else None,
+            "className": " ".join(frame.get("class") or []),
+            "title": frame.get("title") or source_name,
+            "allow": frame.get("allow"),
+            "allowFullscreen": frame.has_attr("allowfullscreen"),
+            "language": language,
+            "sourceName": source_name,
+        })
+    return out
+
+
+def extract_visible_video_endpoints(html: str, page_url: str) -> tuple[list[dict], list[str]]:
+    """Use visible alternative-link data-video values; never inspect scripts/manifests."""
+    soup = BeautifulSoup(html or "", "html.parser")
+    frames, errors = [], []
+    for group in soup.select("div.alternative-links"):
+        language = (group.get("data-lang") or "").upper() or None
+        for button in group.select("button.alternative-link[data-video]"):
+            video_id = (button.get("data-video") or "").strip()
+            if not video_id or len(video_id) > 256 or any(c in video_id for c in "\"\'<> "):
+                continue
+            label = re.sub(r"\s+", " ", button.get_text(" ", strip=True)).strip() or "Görünür kaynak"
+            endpoint = urljoin(BASE_URL + "/", "video/" + quote(video_id, safe="") + "/")
+            payload = fetcher.get(endpoint, api=True, timeout=10, retries=0)
+            if not payload:
+                errors.append(f"{video_id}:endpoint_fetch_failed")
+                continue
+            found = _visible_iframe_attrs(payload, endpoint, label, language)
+            if not found:
+                errors.append(f"{video_id}:no_visible_iframe")
+            frames.extend(found)
+    unique, seen = [], set()
+    for frame in frames:
+        key = (frame.get("src"), frame.get("language"), frame.get("sourceName"))
+        if key not in seen:
+            seen.add(key)
+            unique.append(frame)
+    return unique, errors
 
 
 def parse_detail_page(html: str, page_url: str) -> dict:
@@ -399,30 +457,7 @@ def parse_detail_page(html: str, page_url: str) -> dict:
     genres = [a.get_text(" ", strip=True) for a in soup.select(".post-info-genres a") if a.get_text(strip=True)]
     cast = [a.get_text(" ", strip=True) for a in soup.select(".post-info-cast a") if a.get_text(strip=True)]
 
-    iframes = []
-    for frame in soup.select("iframe"):
-        raw = frame.get("data-src") or frame.get("src")
-        if not raw:
-            continue
-        src = urljoin(page_url, raw.strip())
-        # Ignore blank/hidden utility frames and unrelated third-party frames.
-        if not _same_or_allowed_frame(src):
-            continue
-        width = str(frame.get("width") or "").strip()
-        height = str(frame.get("height") or "").strip()
-        if width == "1" and height == "1":
-            continue
-        if not frame.get("class") and not frame.get("data-src") and not frame.get("src"):
-            continue
-        iframes.append({
-            "type": "iframe",
-            "src": src,
-            "dataSrc": urljoin(page_url, frame.get("data-src")) if frame.get("data-src") else None,
-            "className": " ".join(frame.get("class") or []),
-            "title": frame.get("title"),
-            "allow": frame.get("allow"),
-            "allowFullscreen": frame.has_attr("allowfullscreen"),
-        })
+    iframes = _visible_iframe_attrs(html, page_url)
 
     return {
         "title": title,
@@ -452,6 +487,11 @@ def enrich_card(card: dict) -> dict:
     if not html:
         return {**card, "iframeStatus": "fetch_failed", "iframes": []}
     detail = parse_detail_page(html, card["href"])
+    endpoint_frames, endpoint_errors = extract_visible_video_endpoints(html, card["href"])
+    existing = {x.get("src") for x in detail.get("iframes", [])}
+    detail["iframes"].extend(x for x in endpoint_frames if x.get("src") not in existing)
+    detail["iframeStatus"] = "found" if detail["iframes"] else ("endpoint_error" if endpoint_errors else "not_found")
+    detail["visibleEndpointErrors"] = endpoint_errors[:20]
     merged = dict(card)
     for key in ("title", "originalTitle", "year", "country", "imdb", "duration", "genres", "description", "poster", "cast"):
         if detail.get(key):
@@ -459,6 +499,7 @@ def enrich_card(card: dict) -> dict:
     merged["iframes"] = detail["iframes"]
     merged["iframeStatus"] = detail["iframeStatus"]
     merged["detailFetchedAt"] = detail["detailFetchedAt"]
+    merged["visibleEndpointErrors"] = detail.get("visibleEndpointErrors", [])
     return merged
 
 
