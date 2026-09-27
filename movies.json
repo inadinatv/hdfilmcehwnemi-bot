@@ -1,8 +1,10 @@
 {
-  "updatedAt": "2026-09-27T03:50:57+00:00",
-  "source": "https://hdfilmcehennemi.la",
+  "updatedAt": "2026-09-27T09:31:33+00:00",
+  "source": "https://www.hdfilmcehennemi.la",
   "total": 23,
-  "strategies": {},
+  "strategies": {
+    "direct": 1
+  },
   "categories": [
     {
       "name": "IMDb 7+",
@@ -221,25 +223,29 @@
       "title": "Amansız - The Furious",
       "originalTitle": "The Furious",
       "href": "https://hdfilmcehennemi.la/the-furious-2026-7/",
-      "poster": "https://image.tmdb.org/t/p/w500/9bwhxI1Z9gGgqE2G70x6O6sBv7R.jpg",
+      "poster": "https://www.hdfilmcehennemi.nl/images/list/poster/the-furious.webp",
       "backdrop": "https://image.tmdb.org/t/p/original/9w9K5fWnC38bB9jA60E3uWb7G1Y.jpg",
-      "imdb": 7.4,
+      "imdb": 7.2,
       "year": 2026,
       "type": "film",
-      "duration": "1 sa 54 dk",
-      "country": "Hong Kong, Tayland",
+      "duration": "113 dakika",
+      "country": "Çin Hong Kong ÖİB",
       "director": "Kenji Tanigaki",
       "cast": [
-        "Xie Miao",
-        "Joe Taslim",
-        "Jaa Phanom",
-        "JeeJa Yanin",
-        "Yang Enyu"
+        "Tse Miu Wang Wei",
+        "Joe Taslim Navin",
+        "En You Yang Rainy",
+        "Yayan Ruhian Tak",
+        "JeeJa Yanin Matia",
+        "Brian Le Ho",
+        "Joey Iwanaga Paklong",
+        "Sahajak Boonthanakit Mr. Song",
+        "Manatsanun Panlertwongskul Yadong"
       ],
       "genres": [
         "Aksiyon",
-        "Gerilim",
-        "Dövüş Sanatları"
+        "Suç",
+        "Gerilim"
       ],
       "languages": [
         "Türkçe Dublaj",
@@ -257,13 +263,30 @@
         "2026",
         "Türkçe Dublaj"
       ],
-      "description": "Kızını kaçıran uluslararası bir insan kaçakçılığı şebekesini çökertmek için tek başına yola çıkan eski bir özel kuvvetler askeri, Güneydoğu Asya yeraltı dünyasını birbirine katar.",
+      "description": "Wang Wei'nin kızı kaçırılınca, yozlaşmış polisten yardım alamaz ve kızını bulmak için kendi yoluna çıkar. Yanında sadece karısı kaybolmuş olan gazeteci Navin vardır. İntikam ateşiyle dolup taşan bu ikili, suçlulara karşı nefes kesen bir dövüş mücadelesi verir.",
       "trailer": "https://www.youtube.com/watch?v=M7FIvfx5J10",
       "quality": "1080p Full HD",
       "sources": [],
       "enriched": true,
-      "iframeStatus": "fetch_failed",
-      "iframes": []
+      "iframeStatus": "found",
+      "iframes": [
+        {
+          "type": "iframe",
+          "src": "https://hdfilmcehennemi.mobi/video/embed/jzvUOZCGbJQ/?rapidrame_id=oygatx6qnx79",
+          "dataSrc": "https://hdfilmcehennemi.mobi/video/embed/jzvUOZCGbJQ/?rapidrame_id=oygatx6qnx79",
+          "className": "close",
+          "title": null,
+          "allow": null,
+          "allowFullscreen": true,
+          "language": null,
+          "sourceName": null
+        }
+      ],
+      "detailFetchedAt": "2026-09-27T09:21:40+00:00",
+      "visibleEndpointErrors": [
+        "278267:endpoint_fetch_failed",
+        "278270:endpoint_fetch_failed"
+      ]
     },
     {
       "id": "the-batman-part-two-2026",
