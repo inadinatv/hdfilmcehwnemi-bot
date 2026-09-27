@@ -1,77 +1,89 @@
-# HDFilmCehennemi – Gelişmiş Katalog Botu & Özel HLS Player (V2.0 PRO)
+# HDFilmCehennemi – Film Botu & HLS Player (V3.0 TV)
 
-Bu proje, siteyi derinlemesine araştırıp **tüm filmleri zengin kategorilerle** `public/movies.json` veritabanına aktaran Python botu ile **AES-128 şifreli, çok sesli ve çok altyazılı m3u8 yayınlarını sorunsuz oynatan özel HLS video oynatıcısını** (Next.js) içerir.
-
----
-
-## 🌟 Neler Geliştirildi ve Çözüldü?
-
-### 1. 🎬 Film Oynatma Çözümü & Key / Token Alanı ("Şu an hiçbir filmi oynatmıyor" Çözümü)
-- **Sorun:** Cloudflare engelleri, süresi dolan CDN bağlantıları veya şifreli `#EXT-X-KEY` anahtarları nedeniyle tarayıcı doğrudan oynatamıyordu.
-- **Çözüm:**
-  - **Özel Key & API Alanı:** Oynatıcı içine ve sayfa başlığına **"🔑 Key / API / Özel Akış"** modalı eklendi. Kullanıcı isterse `ZenRows / ScraperAPI` anahtarını, isterse doğrudan harici bir `M3U8 / MP4` akışını girip anında oynatabilir.
-  - **AES-128 Key Proxy:** HLS `.m3u8` oynatma listelerindeki tüm segmentler (`.ts`, `fMP4`), ses dosyaları ve `#EXT-X-KEY` şifre çözme anahtarları `/api/stream` proxy'si üzerinden gerekli `Referer`, `Origin`, `User-Agent` ve `Range` başlıklarıyla otomatik çözümlenir.
-  - **Çoklu Yedek Kaynak:** Canlı siteden akış alınamazsa sistem otomatik olarak yüksek kaliteli alternatif yayın sunucularını (Full HD, 4K UHD, TR Dublaj, Altyazılı) devreye alır.
-
-### 2. 🎛️ Özel Fonksiyonlu HLS Oynatıcı (`HlsPlayer.js`)
-- **Görüntü Kalitesi:** Otomatik adaptif bitrate (Auto), 1080p, 720p, 480p, 360p ve anlık bitrate (kbps / Mbps) göstergesi.
-- **Çoklu Ses Parçası (Dublaj):** Türkçe Dublaj, Orijinal Ses ve dil değiştirme desteği.
-- **Gelişmiş Altyazı Yönetimi:**
-  - Türkçe ve İngilizce gömülü/harici altyazılar.
-  - **Kendi Altyazını Yükle:** Bilgisayardan `.srt` veya `.vtt` dosyası seçip videoya anında ekleme.
-  - **Altyazı Stili:** Boyut (0.8x – 1.8x), metin rengi (Beyaz, Sarı, Mavi, Yeşil) ve arka plan ayarı.
-  - **Senkron Ayarı:** Altyazı kaymasını düzeltmek için **±5.0 sn** senkron kaydırma.
-- **Oynatma Hızı:** 0.25x – 3.0x hız seçenekleri.
-- **Gelişmiş Kontroller:**
-  - ±10 sn ve ±30 sn hızlı atlama.
-  - İlerleme çubuğunda hover süre önizlemesi (Time Tooltip).
-  - **Sinema Modu (Theater Mode)** ve **Resim içinde Resim (PiP)**.
-  - **Tam Ekran:** Mobil cihazlarda otomatik yatay ekran (landscape) kilidi.
-  - **Ekran Görüntüsü (Snapshot):** Anlık video karesini tam çözünürlükte PNG olarak kaydetme.
-  - **A-B Tekrar Döngüsü:** Belirlenen A ve B saniyeleri arasında sonsuz döngü.
-  - **Uyku Zamanlayıcı:** 15, 30, 45, 60, 90, 120 dakika sonra otomatik durdurma.
-  - **Kaldığı Yerden Devam Et:** Tarayıcı hafızasında saniyesine kadar kaydedilen son konumu hatırlama.
-  - **Mobilde Jestler:** Sol taraf dikey kaydırma parlaklık, sağ taraf dikey kaydırma ses, çift dokunma ile 10sn sarma.
-  - **İstatistikler (Stats for Nerds):** Canlı çözünürlük, tampon süresi, kayıp kareler ve ağ hızı paneli.
-  - **Klavye Kısayolları:** Space/K, J/L, Sol/Sağ, Yukarı/Aşağı, 0-9, M, F, P, C, S, A, T, I tuşları.
-
-### 3. 📂 Çok Fonksiyonlu Kategoriler & Gelişmiş Filtreleme
-- **Kategori Grupları:**
-  - **🎬 Listeler:** Yeni Eklenenler, Vizyondaki Filmler, Nette İlk, Tavsiye Filmler, IMDb 7+, En Çok Beğenilenler, En Çok Yorumlananlar, Oscar Ödüllü, 4K Ultra HD Filmler, Yerli Filmler, Yabancı Filmler.
-  - **🎭 22+ Tür:** Aksiyon, Macera, Animasyon, Bilim Kurgu, Biyografi, Komedi, Suç, Belgesel, Dram, Aile, Fantastik, Tarih, Korku, Müzik, Gizem, Romantik, Savaş, Spor, Gerilim, Western, Polisiye, Anime.
-  - **📅 Yıllar & Dönemler:** 2026, 2025, 2024, 2023, 2022, 2021, 2020, 2015-2019, 2010-2014, 2000-2009, 1990-1999, 1980 Öncesi.
-  - **⭐ IMDb Filtresi:** IMDb 8.5+ Başyapıtlar, IMDb 8.0+, IMDb 7.0+, IMDb 6.0+.
-  - **🗣️ Dil / Ses:** Türkçe Dublaj, Türkçe Altyazılı, Dual Ses.
-  - **📺 Format:** Sadece Filmler veya Sadece Diziler.
-  - **⭐ Favorilerim:** Yerel hafızaya tek tıkla film kaydetme.
-  - **🕘 İzleme Geçmişi:** İzlediğiniz filmlerin listesi.
-- **Kombine Çoklu Filtre:** Aynı anda Tür + Yıl + Minimum IMDb + Dil + Format seçimi yapabilme.
-- **3 Farklı Görünüm Modu:**
-  - 🔲 Standart Kart Görünümü (Büyük afişler)
-  - ▦ Kompakt Izgara Görünümü (Yoğun afişler)
-  - ☰ Detaylı Liste Görünümü (Özet, oyuncular, süre, tür ve hızlı butonlar)
-- **Hızlı Önizleme Modalı (Quick Info):** Film kartına tıklamadan özet, oyuncular, yönetmen ve fragmana erişim.
-- **Anlık Canlı Arama:** Türkçe karakter duyarlı, siteden ve katalogdan eşzamanlı arama.
+CloudStream uzantısının **"kalbi"** ([hexated/Hdfilmcehennemi](https://github.com/hexated/cloudstream-extensions-hexated)) tam entegre edilmiş; film kartları, kategori rafları, canlı arama ve **AES-128 anahtarlı m3u8** çözen özel HLS oynatıcıyla, **Vestel/Android TV uzaktan kumanda dostu** arayüzde birleştirilmiş tam teşkilatlı film sitesi.
 
 ---
 
-## 🚀 Kurulum ve Çalıştırma
+## 🎮 TV / Uzaktan Kumanda Deneyimi (Vestel Stili)
+
+Arayüz, TV'de yayınlamış olduğumuz sürümün davranış modeline göre tasarlandı:
+
+- **← → ↑ ↓** : Kartlar ve butonlar arasında gezinme. Yatayda aynı görsel çizgide ilerler; dikeyde en yakın X merkezine atlar (2D grid desteği).
+- **OK / Enter** : Odaktaki kartı/butonları tetikler.
+- **ESC** : Modal kapat → arama temizle → sekme değiştir → kataloğa dön (kademeli geri).
+- **Oynatıcıda** : Odak oynatıcı sahnesindeyken oklar **seek/vol**'a devredilir (player kısayolları); **↑** ile kaynağa geri dönülür. "▶ Oynatıcı" butonu odağı sahneye atar.
+- Oda ringi: kırmızı glow + zoom; oda dışı kartlar hafif karartılır (gerçek TV hissi).
+- Fare/klavye (Tab) ve dokunmatik de aynı akışta çalışır — tek kod tabanı.
+
+Çekirdek: `components/TvNav.js` (`data-stage` → `data-row` → `data-fn` odak modeli; sahte DOM ile unit-test edilmiş).
+
+---
+
+## 🫀 CloudStream Çekirdeği (Kotlin → JS Bütün Entegrasyon)
+
+| Uzantıdaki mekanizma | Bu repoda karşılığı |
+|---|---|
+| `mainPageOf` listeleri (home, home-series, tavsiye, imdb7, mostLiked, mostCommented…) | `lib/hdfc.js → LISTS` + `GET /api/list?key=…` |
+| `search` (`/search?q=` JSON sonuçları) | `GET /api/search?q=…` (canlı + yerel katalog) |
+| `load` (başlık, afiş, türler, yıl, oyuncular, fragman, öneriler, bölümler) | `parseDetail` + `GET /api/detail?url=…` |
+| `loadLinks` (`div.alternative-links` → `/video/{id}/` → iframe) | `getIframeForVideo` + `resolveEmbed` (rapidrame/mobi dallanmasıyla) |
+| `invokeLocalSource` (`getAndUnpack` + `decryptLocalUrl`) | `unpack` + **`decryptLocalUrl`** (aşağı) + `resolveVideoFromScript` |
+| `CloudflareKiller` interceptor | Çok stratejili `smartFetch`: direkt → mirror → ZenRows/ScraperAPI → Translate köprüsü → public proxy |
+| `newSubtitleFile` (`tracks:` altyazıları) | `parseTracks` + `GET /api/subtitle` (SRT→VTT) |
+| M3U8 + Referer/UA başlıklı oynatma | `GET /api/stream` (segment, AES-128 key, Range, CORS proxy) |
+
+**`decryptLocalUrl` (yeni, birebir port):** Site, m3u8 URL'ini obfke script içinde `(["parça1","parça2",…])` + `dc_xxx` fonksiyonuyla saklar ve **algoritma sırasını döndürür**. Port, script'i okuyarak:
+
+1. parts dizisini ve `magicNum % (i + magicOffset)` değerlerini çıkarır,
+2. `atob` / `reverse` / `rot(N)` işlemlerini **script içindeki gerçek sırayla** toplar,
+3. rot shift'ini script metninden türetir (`charCodeAt(0) + N` ya da `o - base ± N` → `(26-N)%26`),
+4. modulo unmix ile gerçek URL'e ulaşır.
+
+`resolveVideoFromScript` içinde **ilk strateji** olarak çalışır; sabit varyantlar (Aniyomi/Aralık 2025/Close/Rapidrame/legacy `dc_hello`) yedek olarak korunur. → `tests/hdfc.test.mjs` (5 codec testi).
+
+---
+
+## 📂 Sistematik Katalog (75+ içerik, otomatik kategorilendirme)
+
+- `lib/catalog-data.js`: 75 kuratlı film/dizi (yabancı + yerli, Türkçe özet, IMDb, tür, yıl, dil).
+- `autoCategorize()`: yıl kovası, IMDb bantları (7+/8-9/9+), türler, dil, yerli/yabancı, "Yeni Eklenenler" etiketleri otomatik üretilir → 55+ kategori.
+- `public/movies.json`: `python3 scraper.py` çıktısı (canlı tarama) ile birleşir:
+  - `GET /api/catalog` → scraper verisi + kuratlı katalog (ID bazında merge, kategori sayaçları yeniden hesap).
+  - `node scripts/rebuild-catalog.mjs` → dosyayı yerinde yeniden derler (canlı siteye ulaşılamayan ortamlarda dahi zengin katalog korunur).
+- **Afiş garantisi:** Gerçek TMDB afiş yoksa/yüklenemezse `lib/poster.js` markalı SVG afiş üretir (başlık, yıl, tür) — grid'de asla kırık kart kalmaz.
+- `GET /api/list?key=…&page=…`: Siteden canlı raflar (LIVE_KEYS) + yerel katalog fallback'i.
+
+---
+
+## ▶️ Özel HLS Oynatıcı (`components/HlsPlayer.js`)
+
+- Otomatik adaptif bitrate (Auto/1080p/720p/480p/360p) + anlık kbps göstergesi
+- Çoklu ses (TR Dublaj / Orijinal), çoklu altyazı + **kendi SRT/VTT dosyayı yükleme**
+- Altyazı stili (boyut/rengi), ±5 sn senkron, 0.25x–3x hız
+- ±10/±30 sn sarma, theater modu, PiP, tam ekran (mobilde landscape kilidi)
+- Ekran görüntüsü (PNG), A-B döngü, uyku zamanlayıcı (15–120 dk), kaldığı yerden devam
+- Mobil jestler (parlaklık/ses kaydırma, çift dokunma), Stats paneli
+- Klavye: Space/K, J/L, ←/→, ↑/↓, 0-9, M, F, P, C, S, A, T, I
+- **TV ile uyum:** Odak `[data-fn]` UI elemanındayken tuşlar TV nav'a aittir; odağın oynatıcıda olduğu durumlarda player kısayolları devrededir.
+
+`/api/stream` proxy'si: tüm m3u8 URI'lerini (segment, ses, **AES-128 key**, alt playlist) `Referer`/`Origin`/`User-Agent`/`Range` başlıklarıyla proxy'den geçirir; upstream ölürse yerel demo master playlist'e düşer (video asla bozulmaz).
+
+---
+
+## 🚀 Kurulum
 
 ```bash
-# Bağımlılıkları yükleyin
 npm install
-pip install -r requirements.txt
 
-# 1) Kataloğu çekin / güncelleyin (Tüm kategoriler, yüzlerce film)
+# Kataloğu canlı siteden güncelle (isteğe bağlı; blokluysa yerleşik 75'lik katalog devrede)
 python3 scraper.py
+node scripts/rebuild-catalog.mjs
 
-# 2) Web uygulamasını başlatın
-npm run dev
-# Tarayıcıda: http://localhost:3000
-
-# 3) Testleri çalıştırın
-npm run test:lib
+npm run dev        # http://localhost:3000  (0.0.0.0'a bağlanır)
+npm run test:lib   # 28 test: codec, parser, proxy, TV navigasyon
 ```
+
+İsteğe bağlı çevre değişkenleri: `HDFC_BASE`, `ZENROWS_API_KEY`, `SCRAPERAPI_KEY` (veya arayüzdeki 🔑 Key kutusu — tarayıcıda saklanır, sunucuya gitmez).
 
 ---
 
@@ -79,10 +91,37 @@ npm run test:lib
 
 | Uç Nokta | Açıklama |
 |---|---|
-| `GET /api/catalog` | Tüm film ve kategori veritabanını döner |
-| `GET /api/video?url=<film_url>&key=<api_key>` | Film için oynatılabilir HLS M3U8 kaynaklarını ve altyazıları döner |
-| `GET /api/stream?url=<m3u8_veya_ts>&ref=<referer>&key=<key>` | HLS akış ve segment proxy'si (CORS, Range, AES-128 Key ve başlık desteği) |
-| `GET /api/subtitle?url=<srt_veya_vtt>` | Altyazı proxy'si ve SRT → WebVTT dönüştürücü |
-| `GET /api/detail?url=<film_url>` | Film detayları, oyuncular, özet, fragman ve benzer filmler |
-| `GET /api/search?q=<kelime>` | Canlı ve yerel katalog araması |
-| `GET /api/list?key=<kategori_key>&page=1` | Siteden anlık kategori listesi çekimi |
+| `GET /api/catalog` | Merge edilmiş tam katalog (movies + 55 kategori) |
+| `GET /api/list?key=…&page=…` | Siteden canlı raf listesi (16 hazır key) |
+| `GET /api/search?q=…` | Canlı + yerel arama |
+| `GET /api/detail?url=…` | Detay: oyuncular, özet, fragman, bölümler, öneriler |
+| `GET /api/video?url=…&key=…&customM3u8=…` | Film → tüm kaynakları çözüp proxy'li m3u8 + altyazı listesi |
+| `GET /api/stream?url=…&ref=…&key=…` | HLS/segment/key/altyazı proxy'si (CORS, Range, AES-128) |
+| `GET /api/subtitle?url=…` | Altyazı proxy'si + SRT→VTT |
+
+---
+
+## 🗂 Proje Yapısı
+
+```
+app/
+  page.js                  # TV ana sayfa: hero carousel + kategori rafları + gridler
+  watch/[id]/page.js       # İzleme sayfası: oynatıcı, kaynaklar, bölümler, öneriler
+  api/…                    # 7 uç nokta (yukarıdaki tablo)
+components/
+  HlsPlayer.js             # Özel HLS oynatıcı (1.5k satır, tam özellik seti)
+  TvNav.js                 # TV/remote navigasyon çekirdeği (sahte DOM testli)
+lib/
+  hdfc.js                  # CloudStream çekirdeği: fetch stratejileri, parser'lar, codec'ler
+  catalog-data.js          # 75'lik kuratlı katalog + autoCategorize + merge
+  poster.js                # SVG afiş üretici
+scripts/
+  rebuild-catalog.mjs      # public/movies.json yeniden derleme
+tests/
+  hdfc.test.mjs            # codec/parser/proxy testleri
+  tvnav.test.mjs           # TV navigasyon testleri (sahte DOM)
+public/
+  movies.json              # Katalog veritabanı
+  hls/demo/                # Yedek demo HLS stream (master + segment + altyazılar)
+scraper.py                 # Canlı site tarama botu (çok stratejili, paralel)
+```

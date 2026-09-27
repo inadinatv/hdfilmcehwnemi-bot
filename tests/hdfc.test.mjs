@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   dcDecodeParts,
   dcHelloLegacy,
+  decryptLocalUrl,
   unpack,
   resolveVideoFromScript,
   parseCards,
@@ -42,6 +43,86 @@ test('legacy dc_hello', () => {
   const inner = b64e('junk|' + URL_);
   const enc = b64e(rev(inner));
   assert.equal(dcHelloLegacy(enc), URL_);
+});
+
+// ---- CloudStream "kalbi" decryptLocalUrl (Kotlin port) test yardımcıları ----
+// Decrypt pipeline: parts → op1 → op2 → ... → unmix → URL
+// Encryption (test): URL → unmix⁻¹ → ... → op2⁻¹ → op1⁻¹ → payload
+const unmixFwd = (s) => { let o = ''; for (let i = 0; i < s.length; i++) o += String.fromCharCode((s.charCodeAt(i) + (399756995 % (i + 5))) % 256); return o; };
+const rotBack = (s, n) => {
+  let o = '';
+  for (const ch of s) {
+    const c = ch.charCodeAt(0);
+    if (c >= 97 && c <= 122) { let x = c - n; if (x < 97) x += 26; o += String.fromCharCode(x); }
+    else if (c >= 65 && c <= 90) { let x = c - n; if (x < 65) x += 26; o += String.fromCharCode(x); }
+    else o += ch;
+  }
+  return o;
+};
+function encryptForOps(ops, url) {
+  // URL → unmix⁻¹ → opN⁻¹ → … → op1⁻¹ (= base64 en dışta, payload temiz kalır)
+  let s = unmixFwd(url);
+  for (const op of [...ops].reverse()) {
+    if (op === 'atob') s = Buffer.from(s, 'latin1').toString('base64');
+    else if (op === 'reverse') s = [...s].reverse().join('');
+    else if (op.indexOf('rot') === 0) s = rotBack(s, parseInt(op.split(':')[1], 10));
+  }
+  return s;
+}
+function dynamicScript(payload, ops) {
+  const lines = ops.map((op) => {
+    if (op === 'atob') return 'x = atob(x);';
+    if (op === 'reverse') return "x = x.split('').reverse().join('');";
+    if (op.indexOf('rot') === 0) {
+      const n = op.split(':')[1];
+      return `x = x.replace(/./g, function(c) { var o = c.charCodeAt(0) + ${n}; if (o > 122) o -= 26; return String.fromCharCode(o); });`;
+    }
+    throw new Error('unknown op: ' + op);
+  });
+  return `var src = (["${payload}"]); function dc_vx(x) { ${lines.join(' ')} } function d1x() { return 1; }`;
+}
+
+test('decryptLocalUrl: atob → reverse → rot13 → unmix', () => {
+  const ops = ['atob', 'reverse', 'rot:13'];
+  const script = dynamicScript(encryptForOps(ops, URL_), ops);
+  assert.equal(decryptLocalUrl(script), URL_);
+});
+
+test('decryptLocalUrl: atob → rot5 → reverse → unmix (farklı sıra + dinamik shift)', () => {
+  const ops = ['atob', 'rot:5', 'reverse'];
+  const script = dynamicScript(encryptForOps(ops, URL_), ops);
+  assert.equal(decryptLocalUrl(script), URL_);
+});
+
+test('decryptLocalUrl: "o - base - N" rot varyantı (shift türetme)', () => {
+  // script metni "o - base - 7" barındırıyor → library shift = (26-7)%26 = 19 türetip uygular
+  const derivedShift = (26 - 7) % 26; // 19
+  let s = unmixFwd(URL_);
+  s = rotBack(s, derivedShift);                 // rot⁻¹
+  s = [...s].reverse().join('');                // reverse⁻¹
+  s = Buffer.from(s, 'latin1').toString('base64'); // atob⁻¹
+  const script = 'var src = (["' + s + '"]); function dc_vx(x) { x = atob(x); x = x.split(\'\').reverse().join(\'\');'
+    + ' x = x.replace(/./g, function(c) { var base = 97; var o = c.charCodeAt(0); return String.fromCharCode(o - base - 7 + base); }); }'
+    + ' function d1x() { return 1; }';
+  assert.equal(decryptLocalUrl(script), URL_);
+});
+
+test('resolveVideoFromScript: dinamik CloudStream script çözümü', () => {
+  const ops = ['atob', 'reverse', 'rot:13'];
+  const payload = encryptForOps(ops, URL_);
+  const [a, b, c] = [payload.slice(0, 9), payload.slice(9, 22), payload.slice(22)];
+  const script = `var s = (["${a}","${b}","${c}"]); function dc_kx(x) { var y = x; ${['atob', 'reverse', 'rot:13'].map((op) => {
+    if (op === 'atob') return 'y = atob(y);';
+    if (op === 'reverse') return "y = y.split('').reverse().join('');";
+    return 'y = y.replace(/./g, function(ch) { var o = ch.charCodeAt(0) + 13; if (o > 122) o -= 26; return String.fromCharCode(o); });';
+  }).join(' ') } } function d1x() { return y; }`;
+  assert.equal(resolveVideoFromScript(script), URL_);
+});
+
+test('decryptLocalUrl: bozuk girdide null döner', () => {
+  assert.equal(decryptLocalUrl('bu bir script değil'), null);
+  assert.equal(decryptLocalUrl(''), null);
+  assert.equal(decryptLocalUrl(null), null);
 });
 
 test('unpack p,a,c,k,e,d', () => {

@@ -434,6 +434,10 @@ export default function HlsPlayer({
   useEffect(() => {
     const onKey = (e) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+      // TV/uzak kumanda nav aktif elemanı kullanırken tuşlar TV nav'a ait
+      // (ama oynatıcı sahnesi [data-player] içine odaktaysa tuşlar yine player'ın)
+      const ae = document.activeElement;
+      if (ae && ae !== document.body && ae.hasAttribute && ae.hasAttribute('data-fn') && !ae.closest('[data-player]')) return;
       const x = v();
       if (!x) return;
 
