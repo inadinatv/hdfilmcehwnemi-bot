@@ -1,8 +1,10 @@
 {
-  "updatedAt": "2026-10-09T22:19:17+00:00",
+  "updatedAt": "2026-10-10T00:13:36+00:00",
   "source": "https://hdfilmcehennemi.la",
   "total": 23,
-  "strategies": {},
+  "strategies": {
+    "direct": 1
+  },
   "categories": [
     {
       "name": "IMDb 7+",
@@ -266,9 +268,21 @@
       "quality": "1080p Full HD",
       "sources": [],
       "enriched": true,
-      "iframeStatus": "fetch_failed",
-      "iframes": [],
-      "detailFetchedAt": "2026-10-08T00:07:37+00:00",
+      "iframeStatus": "found",
+      "iframes": [
+        {
+          "type": "iframe",
+          "src": "https://hdfilmcehennemi.mobi/video/embed/jzvUOZCGbJQ/?rapidrame_id=oygatx6qnx79",
+          "dataSrc": "https://hdfilmcehennemi.mobi/video/embed/jzvUOZCGbJQ/?rapidrame_id=oygatx6qnx79",
+          "className": "close",
+          "title": null,
+          "allow": null,
+          "allowFullscreen": true,
+          "language": null,
+          "sourceName": null
+        }
+      ],
+      "detailFetchedAt": "2026-10-10T00:07:45+00:00",
       "visibleEndpointErrors": [
         "278267:endpoint_fetch_failed",
         "278270:endpoint_fetch_failed"
